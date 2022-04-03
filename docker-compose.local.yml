@@ -1,0 +1,79 @@
+version: '3.8'
+services:
+  ### ===================
+  ### APP SERVICE
+  ### ===================
+  app:
+    image: cosmtrek/air
+    container_name: app
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    ports:
+      - 4000:4000
+    networks:
+      - restapi_network
+    depends_on:
+      - db
+  ### ===================
+  ### DB SERVICE
+  ### ===================
+  db:
+    container_name: postgres
+    image: postgres:12-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: api
+      POSTGRES_USER: local-dev
+      POSTGRES_PASSWORD: boilerplate
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - 5432:5432
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - restapi_network
+  ### ===================
+  ### REDIS SERVER
+  ### ===================
+  redis:
+    container_name: redis
+    image: redis:alpine
+    command: redis-server --save 60 1 --requirepass boilerplates --loglevel warning
+    restart: always
+    healthcheck:
+      interval: 120ms
+      retries: 5
+      start_period: 60ms
+      test: |
+        touch /tmp/healthcheck.txt &&
+        mkdir /tmp/healthcheck &&
+        mv /tmp/healthcheck.txt /tmp/healthcheck &&
+        cd /tmp/healthcheck &&
+        echo "hello my docker container is working fine" >> healthcheck.txt &&
+        cat healthcheck.txt &&
+        rm healthcheck.txt &&
+        cd .. &&
+        rmdir /tmp/healthcheck
+        cls
+      timeout: 60ms
+    ports:
+      - 6379:6379
+    networks:
+      - restapi_network
+  ### ========================
+  ### VOLUMES PERSISTENT DATA
+  ### ========================
+volumes:
+  pg-data:
+  ### ===================================
+  ### NETWORKS GROUP FOR ONE SAME SERVICE
+  ### ===================================
+networks:
+  restapi_network:
